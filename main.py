@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 from config import token
-from logic import Pokemon
+from logic import Pokemon, Wizard, Fighter
+import random
 
 # Bot için yetkileri/intents ayarlama
 intents = discord.Intents.default()  # Varsayılan ayarların alınması
@@ -17,24 +18,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print(f'Giriş yapıldı:  {bot.user.name}')  # Botun adını konsola çıktı olarak verir
 
-# '!go' komutu
-@bot.command()
-async def go(ctx):
-    author = ctx.author.name  # Mesaj yazarının adını alma
-    # Kullanıcının zaten bir Pokémon'u olup olmadığını kontrol edin. Eğer yoksa, o zaman...
-    if author not in Pokemon.pokemons.keys():
-        pokemon = Pokemon(author)  # Yeni bir Pokémon oluşturma
-        await ctx.send(await pokemon.info())  # Pokémon hakkında bilgi gönderilmesi
-        image_url = await pokemon.show_img()  # Pokémon resminin URL'sini alma
-        if image_url:
-            embed = discord.Embed()  # Gömülü mesajı oluşturma
-            embed.set_image(url=image_url)  # Pokémon'un görüntüsünün ayarlanması
-            await ctx.send(embed=embed)  # Görüntü içeren gömülü bir mesaj gönderme
-        else:
-            await ctx.send("Pokémonun görüntüsü yüklenemedi!")
-    else:
-        await ctx.send("Zaten kendi Pokémonunuzu oluşturdunuz!")  # Bir Pokémon'un daha önce oluşturulup oluşturulmadığını gösteren bir mesaj
-# Botun çalıştırılması
+
 
 @bot.command()
 async def type(ctx):
@@ -48,5 +32,43 @@ async def type(ctx):
             await ctx.send("Pokémon türleri yüklenemedi!")
     else:
         await ctx.send("Önce kendi Pokémonunuzu oluşturmalısınız! (`!go` komutunu kullanın)")
+
+@bot.command()
+async def go(ctx):
+    author = ctx.author.name  # Komutu çağıran kullanıcının adını alır
+    if author not in Pokemon.pokemons:  # Bu kullanıcı için zaten bir Pokémon olup olmadığını kontrol ederiz
+        chance = random.randint(1, 3)  # 1 ile 3 arasında rastgele bir sayı oluştururuz
+        # Rastgele sayıya göre bir Pokémon nesnesi oluştururuz
+        if chance == 1:
+            pokemon = Pokemon(author)  # Standart bir Pokémon oluştururuz
+        elif chance == 2:
+            pokemon = Wizard(author)  # Wizard türünde bir Pokémon oluştururuz
+        elif chance == 3:
+            pokemon = Fighter(author)  # Fighter türünde bir Pokémon oluştururuz
+        await ctx.send(await pokemon.info())  # Pokémon hakkında bilgi göndeririz
+        image_url = await pokemon.show_img()  # Pokémon görüntüsünün URL'sini alırız
+        if image_url:
+            embed = discord.Embed()  # Gömülü bir mesaj (embed) oluştururuz
+            embed.set_image(url=image_url)  # Gömülü mesaja görüntüyü ekleriz
+            await ctx.send(embed=embed)  # Görüntülü gömülü mesajı göndeririz
+        else:
+            await ctx.send("Pokémon görüntüsü yüklenemedi.")  # Görüntü yüklenemezse hata mesajı veririz
+    else:
+        await ctx.send("Zaten bir Pokémon oluşturmuşsun.")  # Kullanıcıya zaten bir Pokémon oluşturduğunu bildiririz
+
+@bot.command()
+async def attack(ctx):
+    target = ctx.message.mentions[0] if ctx.message.mentions else None
+    if target:
+        if target.name in Pokemon.pokemons and ctx.author.name in Pokemon.pokemons:
+            enemy = Pokemon.pokemons[target.name]
+            attacker = Pokemon.pokemons[ctx.author.name]
+            result = await attacker.attack(enemy)
+            await ctx.send(result)
+        else:
+            await ctx.send("Savaşmak için her iki katılımcının da Pokemon sahibi olması gerekir!")
+    else:
+        await ctx.send("Saldırmak istediğiniz kullanıcıyı etiketleyerek belirtin.")
+
 
 bot.run(token)

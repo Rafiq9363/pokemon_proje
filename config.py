@@ -1,1 +1,1 @@
-token = "TOKENINIZI_BURAYA_YAPISTIRIN"
+token = "TOKEN_HERE"
